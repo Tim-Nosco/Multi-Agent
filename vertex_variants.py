@@ -75,7 +75,6 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 		other_agents = list(range(num_agents))
 		other_agents = other_agents[:agent]+other_agents[agent+1:]
 		other_agents = [vert[a](j,l) for a in other_agents]
-		print other_agents
 		if other_agents:
 			s.add(ForAll( j,ForAll(k,ForAll(l,
 						  Implies( vert[agent](j,k), 
