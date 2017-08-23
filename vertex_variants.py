@@ -61,12 +61,12 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 							  Or( *possible_sources )))
 
 		#at least one of the start verticies must be chosen
-		starts = [Exists([y],vert[agent](i,y)) for i in agent_starts]
+		starts = [vert[agent](i,j) for i in agent_starts for j in range(4)]
 		if starts:
 			s.add(Or(*starts))
 		#at least one of the end verticies must be chosen
 		for goal in agent_goals:
-			ends = [Exists([y],vert[agent](i,y)) for i in goal]
+			ends = [vert[agent](i,j) for i in goal for j in range(4)]
 			if ends:
 				s.add(Or(*ends))
 	s.add(y>=0)
