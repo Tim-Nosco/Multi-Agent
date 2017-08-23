@@ -36,7 +36,7 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 	vert = [Function("v{}".format(i),IntSort(),IntSort(), BoolSort()) for i in range(num_agents)]
 	edge = [Function("e{}".format(i),IntSort(), BoolSort()) for i in range(num_agents)]
 
-	x,y,z = Ints("x y z")
+	x = Int("x")
 	for agent in range(num_agents):
 		for i,e in enumerate(initial_edges):
 			start,end = e
@@ -47,7 +47,7 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 			#if the start vertex of this edge is the start vertex in other edges,
 			#only one of the mentioned edges can be chosen
 			exclusive_edges = connections[start].start_edges.difference(set([i]))
-			exclusive_edges = [edge[agent](x) for x in exclusive_edges]
+			exclusive_edges = [edge[agent](e) for e in exclusive_edges]
 			if exclusive_edges:
 				s.add( Implies( edge[agent](i),
 							  Not( Or( *exclusive_edges ))))
@@ -69,8 +69,6 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 			ends = [vert[agent](i,j) for i in goal for j in range(4)]
 			if ends:
 				s.add(Or(*ends))
-	s.add(y>=0)
-	s.add(y<4)
 	j,k,l=Ints("j k l")
 	#each agent's chosen verticies must be disjoint
 	for agent in range(num_agents):
