@@ -1,2 +1,5 @@
-run:
-	python vertex_variants.py
+run: clean
+	python quicktest.py
+
+clean:
+	rm -rf *.pyc

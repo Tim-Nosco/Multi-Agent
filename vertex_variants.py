@@ -11,8 +11,20 @@ class Node:
 		self.end_edges.append(edge_num)
 		return self
 
-def find_path(initial_edges, num_agents, agent_starts, agent_goals):
+def find_path(initial_edges, num_agents, agent_starts, agent_goals, s):
 	n_edges = len(initial_edges)
+	#vert and edge are a list of interpreted functions, it's index is the agent number
+	vert = [Function("v{}".format(i),IntSort(),IntSort(), BoolSort()) for i in range(num_agents)]
+	edge = [Function("e{}".format(i),IntSort(), BoolSort()) for i in range(num_agents)]
+
+	#ensure invalid edges are not used
+	for i,e in enumerate(initial_edges):
+		_,_,isvalid = e
+		for agent in range(num_agents):
+			s.add(Implies(Not( isvalid ),
+						  Not( edge[agent](i) )))
+	initial_edges = [(start,end) for start,end,_ in initial_edges]
+
 	def build_edges(initial_edges):
 		nodes = dict()
 		for i,e in enumerate(initial_edges):
@@ -31,10 +43,6 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 		return nodes
 
 	connections = build_edges(initial_edges)
-	s = Solver()
-	#vert and edge are a list of interpreted functions, it's index is the agent number
-	vert = [Function("v{}".format(i),IntSort(),IntSort(), BoolSort()) for i in range(num_agents)]
-	edge = [Function("e{}".format(i),IntSort(), BoolSort()) for i in range(num_agents)]
 
 	x = Int("x")
 	for agent in range(num_agents):
@@ -59,14 +67,18 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 			if possible_sources:
 				s.add( Implies( vert[agent](*vert_key),
 							  Or( *possible_sources )))
+			elif vert_key not in agent_starts:
+				#not a start state
+				s.add(Not( vert[agent](*vert_key) ))
 
 		#at least one of the start verticies must be chosen
-		starts = [vert[agent](i,j) for i in agent_starts for j in range(4)]
+		starts = [vert[agent](p,o) for p,o in agent_starts]
 		if starts:
 			s.add(Or(*starts))
 		#at least one of the end verticies must be chosen
 		for goal in agent_goals:
-			ends = [vert[agent](i,j) for i in goal for j in range(4)]
+			possible = [(p,o) for p,o in connections.keys() if p in goal]
+			ends = [vert[agent](p,o) for p, o in possible]
 			if ends:
 				s.add(Or(*ends))
 	j,k,l=Ints("j k l")
@@ -79,6 +91,11 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 			s.add(ForAll( j,ForAll(k,ForAll(l,
 						  Implies( vert[agent](j,k), 
 								   Not( Or( *other_agents )))))))
+		#choosing a variant of a state precludes other variants
+		s.add(ForAll( j,ForAll(k,ForAll(l,
+						  Implies( And( vert[agent](j,k),
+										l!=k),
+								   Not( vert[agent](j,l) ))))))
 
 	if str(s.check())=="unsat":
 		print "unsat"
@@ -86,29 +103,26 @@ def find_path(initial_edges, num_agents, agent_starts, agent_goals):
 
 	m = s.model()
 
-	print "edge list", ['{}: {}'.format(i,e) for i,e in enumerate(initial_edges)]
+	# print "edge list", ['{}: {}'.format(i,e) for i,e in enumerate(initial_edges)]
 	for agent in range(num_agents):
 		print "AGENT: {}".format(agent)
-		print "edges:",["{}:{}".format(i,m.eval(edge[agent](i))) for i in range(n_edges)]
-		print "verts:",["{}:{}".format(i,m.eval(vert[agent](*i))) for i in connections]
+		# print "edges:",["{}:{}".format(i,m.eval(edge[agent](i))) for i in range(n_edges)]
+		# print "verts:",["{}:{}".format(i,m.eval(vert[agent](*i))) for i in connections]
+		print "edges:",["{}=>{}".format(*initial_edges[x[0]]) for x in ((i,m.eval(edge[agent](i))) for i in range(n_edges)) if x[1]]
+		print "verts:",[x[0] for x in ((i,m.eval(vert[agent](*i))) for i in connections) if x[1]]
+if __name__ == "__main__":
+	#graph edges:
+	#e0: x0 -> x1
+	#e1: x1 -> x2
+	#e2: x2 -> x3
+	#e3: x4 -> x5
+	#e4: x5 -> x6
+	#e5: x4 -> x2
+	#goal: find path from x0|x4 to x3|x6
+	s=Solver()
+	g=[((i,0),(j,0),True) for i,j in [(0,1),(1,2),(2,3),(4,5),(5,6),(4,2)]]
+	find_path(g,2,[(0,0),(4,0)],[[3,6]],s)
 
-#graph edges:
-#e0: x0 -> x1
-#e1: x1 -> x12
-#e2: x12 -> x3
-#e3: x1 -> x4
-#e4: x1 -> x5
-#goal: find path from x0 to x3
-# find_path([(0,1),(1,12),(12,3),(1,4),(1,5)],1,[0],[[3]])
-
-#graph edges:
-#e0: x0 -> x1
-#e1: x1 -> x2
-#e2: x2 -> x3
-#e3: x4 -> x5
-#e4: x5 -> x6
-#e5: x4 -> x2
-
-#goal: find path from x0|x4 to x3|x6
-g=[((i,0),(j,0)) for i,j in [(0,1),(1,2),(2,3),(4,5),(5,6),(4,2)]]
-find_path(g,2,[0,4],[[3,6]])
+	s = Solver()
+	g = [((0,0),(1,0),True),((1,1),(2,0),True)]
+	find_path(g,1,[(0,0)],[[2]],s)

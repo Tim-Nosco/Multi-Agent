@@ -36,6 +36,7 @@ def board_states(m):
                             end = (end_j+(width*end_i),facings[f])
                             edges.append((start,end))
                             print "{}\t U> {}".format((i,j,f),(end_i,end_j,f))
+    return edges
 
 
 m = [[True , True , False],
